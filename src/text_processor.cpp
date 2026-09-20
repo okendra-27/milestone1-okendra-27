@@ -17,20 +17,33 @@ static bool is_ascii_digit(char c) {
 static std::vector<std::size_t> detect_paragraph_breaks(const std::string& text) {
     std::vector<std::size_t> breaks;
 
-    for (std::size_t i = 0; i + 1 < text.size(); ++i) {
-        if (text[i] == '\n') {
-            std::size_t j = i + 1;
-            while (j < text.size() && (text[j] == ' ' || text[j] == '\t')) {
-                ++j;
-            }
-            if (j < text.size() && text[j] == '\n') {
-                breaks.push_back(j);
-            }
+    auto is_newline = [&](std::size_t i) {
+        if (i >= text.size()) return false;
+        if (text[i] == '\n') return true;
+        if (text[i] == '\r' && i + 1 < text.size() && text[i+1] == '\n') return true;
+        return false;
+    };
+
+    for (std::size_t i = 0; i < text.size(); ++i) {
+        if (!is_newline(i)) continue;
+
+        std::size_t j = i;
+        if (text[i] == '\r') j++;  // skip CR
+        j++;                       // skip LF
+
+        while (j < text.size() && (text[j] == ' ' || text[j] == '\t')) j++;
+
+        if (is_newline(j)) {
+            std::size_t next = j;
+            if (text[j] == '\r') next++;
+            next++;
+            breaks.push_back(next);
         }
     }
 
     return breaks;
 }
+
 
 std::vector<TokenInfo> TextProcessor::tokenize(const std::string& text) {
     std::vector<TokenInfo> tokens;

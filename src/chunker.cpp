@@ -31,27 +31,28 @@ std::vector<Chunk> Chunker::chunk(
         std::size_t end =
             std::min(begin + policy_.max_tokens, tokens.size());
 
-        // Prefer a paragraph boundary near the end of the chunk.
         if (tokens.size() - begin > policy_.max_tokens) {
 
             const std::size_t earliest =
                 begin + policy_.max_tokens - policy_.paragraph_window;
 
-            for (std::size_t candidate = end;
-                 candidate >= earliest;
-                 --candidate) {
+            std::size_t best = 0;
 
-                if (candidate < tokens.size() &&
+            for (std::size_t candidate = earliest;
+                 candidate <= begin + policy_.max_tokens &&
+                 candidate < tokens.size();
+                 ++candidate) {
+
+                if (candidate > 0 &&
                     tokens[candidate - 1].paragraph !=
                     tokens[candidate].paragraph) {
 
-                    end = candidate;
-                    break;
+                    best = candidate;
                 }
+            }
 
-                if (candidate == earliest) {
-                    break;
-                }
+            if (best != 0) {
+                end = best;
             }
         }
 
@@ -77,12 +78,10 @@ std::vector<Chunk> Chunker::chunk(
 
         chunks.push_back(std::move(item));
 
-        // No more tokens.
         if (end == tokens.size()) {
             break;
         }
 
-        // Start the next chunk with the required overlap.
         begin = end - policy_.overlap;
     }
 
