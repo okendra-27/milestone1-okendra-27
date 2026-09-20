@@ -14,35 +14,64 @@ static bool is_ascii_digit(char c) {
     return (c >= '0' && c <= '9');
 }
 
-static std::vector<std::size_t> detect_paragraph_breaks(const std::string& text) {
+
+static std::vector<std::size_t> detect_paragraph_breaks(
+    const std::string& text)
+{
     std::vector<std::size_t> breaks;
 
-    auto is_newline = [&](std::size_t i) {
-        if (i >= text.size()) return false;
-        if (text[i] == '\n') return true;
-        if (text[i] == '\r' && i + 1 < text.size() && text[i+1] == '\n') return true;
-        return false;
-    };
+    std::size_t i = 0;
 
-    for (std::size_t i = 0; i < text.size(); ++i) {
-        if (!is_newline(i)) continue;
+    while (i < text.size()) {
 
-        std::size_t j = i;
-        if (text[i] == '\r') j++;  // skip CR
-        j++;                       // skip LF
+        // Find the end of the first newline.
+        std::size_t newline_end = i;
 
-        while (j < text.size() && (text[j] == ' ' || text[j] == '\t')) j++;
-
-        if (is_newline(j)) {
-            std::size_t next = j;
-            if (text[j] == '\r') next++;
-            next++;
-            breaks.push_back(next);
+        if (text[i] == '\r' &&
+            i + 1 < text.size() &&
+            text[i + 1] == '\n') {
+            newline_end = i + 2;
         }
+        else if (text[i] == '\n') {
+            newline_end = i + 1;
+        }
+        else {
+            ++i;
+            continue;
+        }
+
+        // Skip spaces/tabs after the newline.
+        std::size_t j = newline_end;
+
+        while (j < text.size() &&
+               (text[j] == ' ' || text[j] == '\t')) {
+            ++j;
+        }
+
+        // A second newline means a blank line.
+        if (j < text.size()) {
+
+            if (text[j] == '\n') {
+                breaks.push_back(j + 1);
+                i = j + 1;
+                continue;
+            }
+
+            if (text[j] == '\r' &&
+                j + 1 < text.size() &&
+                text[j + 1] == '\n') {
+                breaks.push_back(j + 2);
+                i = j + 2;
+                continue;
+            }
+        }
+
+        i = newline_end;
     }
 
     return breaks;
 }
+
 
 
 std::vector<TokenInfo> TextProcessor::tokenize(const std::string& text) {
@@ -52,6 +81,7 @@ std::vector<TokenInfo> TextProcessor::tokenize(const std::string& text) {
     const auto paragraph_breaks = detect_paragraph_breaks(text);
 
     std::size_t paragraph = 0;
+    std::size_t break_index = 0;
     std::size_t pos = 0;
 
     auto is_separator = [&](char c) {
@@ -59,31 +89,45 @@ std::vector<TokenInfo> TextProcessor::tokenize(const std::string& text) {
     };
 
     while (pos < text.size()) {
-        for (std::size_t b : paragraph_breaks) {
-            if (pos == b) {
-                ++paragraph;
-                break;
-            }
-        }
 
+        // Skip separators first.
         while (pos < text.size() && is_separator(text[pos])) {
             ++pos;
         }
-        if (pos >= text.size()) break;
+
+        if (pos >= text.size()) {
+            break;
+        }
+
+        // If this token starts at or after a paragraph break,
+        // it belongs to the next paragraph.
+        while (break_index < paragraph_breaks.size() &&
+               pos >= paragraph_breaks[break_index]) {
+            ++paragraph;
+            ++break_index;
+        }
 
         std::size_t begin = pos;
+
         while (pos < text.size() && !is_separator(text[pos])) {
             ++pos;
         }
+
         std::size_t end = pos;
 
         std::string token;
         token.reserve(end - begin);
+
         for (std::size_t i = begin; i < end; ++i) {
             char c = text[i];
+
             if (is_ascii_letter(c)) {
-                token.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
-            } else if (is_ascii_digit(c)) {
+                token.push_back(
+                    static_cast<char>(
+                        std::tolower(
+                            static_cast<unsigned char>(c))));
+            }
+            else if (is_ascii_digit(c)) {
                 token.push_back(c);
             }
         }
@@ -94,6 +138,7 @@ std::vector<TokenInfo> TextProcessor::tokenize(const std::string& text) {
             info.begin = begin;
             info.end = end;
             info.paragraph = paragraph;
+
             tokens.push_back(std::move(info));
         }
     }
