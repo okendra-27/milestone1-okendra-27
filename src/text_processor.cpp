@@ -24,7 +24,6 @@ static std::vector<std::size_t> detect_paragraph_breaks(
 
     while (i < text.size()) {
 
-        // Find the end of the first newline.
         std::size_t newline_end = i;
 
         if (text[i] == '\r' &&
@@ -40,7 +39,6 @@ static std::vector<std::size_t> detect_paragraph_breaks(
             continue;
         }
 
-        // Skip spaces/tabs after the newline.
         std::size_t j = newline_end;
 
         while (j < text.size() &&
@@ -48,7 +46,6 @@ static std::vector<std::size_t> detect_paragraph_breaks(
             ++j;
         }
 
-        // A second newline means a blank line.
         if (j < text.size()) {
 
             if (text[j] == '\n') {
@@ -99,8 +96,6 @@ std::vector<TokenInfo> TextProcessor::tokenize(const std::string& text) {
             break;
         }
 
-        // If this token starts at or after a paragraph break,
-        // it belongs to the next paragraph.
         while (break_index < paragraph_breaks.size() &&
                pos >= paragraph_breaks[break_index]) {
             ++paragraph;
