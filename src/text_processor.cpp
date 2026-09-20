@@ -14,6 +14,24 @@ static bool is_ascii_digit(char c) {
     return (c >= '0' && c <= '9');
 }
 
+static std::vector<std::size_t> detect_paragraph_breaks(const std::string& text) {
+    std::vector<std::size_t> breaks;
+
+    for (std::size_t i = 0; i + 1 < text.size(); ++i) {
+        if (text[i] == '\n') {
+            std::size_t j = i + 1;
+            while (j < text.size() && (text[j] == ' ' || text[j] == '\t')) {
+                ++j;
+            }
+            if (j < text.size() && text[j] == '\n') {
+                breaks.push_back(j);
+            }
+        }
+    }
+
+    return breaks;
+}
+
 std::vector<TokenInfo> TextProcessor::tokenize(const std::string& text) {
     std::vector<TokenInfo> tokens;
     tokens.reserve(text.size() / 4);
@@ -118,25 +136,6 @@ std::string TextProcessor::normalize(const std::string& input) {
     }
 
     return out;
-}
-
-
-static std::vector<std::size_t> detect_paragraph_breaks(const std::string& text) {
-    std::vector<std::size_t> breaks;
-
-    for (std::size_t i = 0; i + 1 < text.size(); ++i) {
-        if (text[i] == '\n') {
-            std::size_t j = i + 1;
-            while (j < text.size() && (text[j] == ' ' || text[j] == '\t')) {
-                ++j;
-            }
-            if (j < text.size() && text[j] == '\n') {
-                breaks.push_back(j);
-            }
-        }
-    }
-
-    return breaks;
 }
 
 
